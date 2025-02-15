@@ -19,7 +19,7 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    h1 {
+    h1, h2 {
       margin-bottom: 20px;
     }
     .problem {
@@ -72,16 +72,30 @@
       margin-top: 20px;
       min-height: 40px;
     }
+    /* ホーム画面用ボタン */
+    #startButton, #restartButton {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #2196F3;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- ホーム画面 -->
+  <div id="homeScreen" class="container">
     <h1>掛け算練習ゲーム</h1>
-    <!-- 問題表示 -->
+    <p>11×11～99×99の掛け算にチャレンジ！</p>
+    <button id="startButton">スタート</button>
+  </div>
+
+  <!-- ゲーム画面 -->
+  <div id="gameScreen" class="container" style="display: none;">
     <div class="problem" id="problem">問題がここに表示されます</div>
-    <!-- ユーザーの入力表示 -->
     <div class="display" id="inputDisplay"></div>
-    <!-- 数字ボタン -->
     <div class="buttons">
       <button data-number="1">1</button>
       <button data-number="2">2</button>
@@ -94,52 +108,64 @@
       <button data-number="9">9</button>
       <button data-number="0">0</button>
     </div>
-    <!-- 取り消し・回答ボタン -->
     <div class="control-buttons">
       <button id="clearButton">取り消し</button>
       <button id="submitButton">回答</button>
     </div>
-    <!-- 正誤・スコア表示用 -->
     <div class="message" id="message"></div>
   </div>
 
+  <!-- 結果画面 -->
+  <div id="resultScreen" class="container" style="display: none;">
+    <h2>ゲーム終了！</h2>
+    <p id="finalScore">あなたのスコア: 0 / 10</p>
+    <p id="finalTime">解答時間: 0秒</p>
+    <button id="restartButton">もう一度プレイ</button>
+  </div>
+
   <script>
-    // ゲーム用の変数
+    // グローバル変数
     let problems = [];         // 問題リスト
     let currentProblemIndex = 0;
     let score = 0;
     let currentInput = "";
+    let startTime = null;      // ゲーム開始時刻
 
     // HTML要素の取得
+    const homeScreen = document.getElementById('homeScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    const startButton = document.getElementById('startButton');
     const problemElement = document.getElementById('problem');
     const inputDisplay = document.getElementById('inputDisplay');
     const messageElement = document.getElementById('message');
     const clearButton = document.getElementById('clearButton');
     const submitButton = document.getElementById('submitButton');
     const numberButtons = document.querySelectorAll('.buttons button');
+    const finalScoreElement = document.getElementById('finalScore');
+    const finalTimeElement = document.getElementById('finalTime');
+    const restartButton = document.getElementById('restartButton');
 
     // 11x11～99x99の掛け算問題をnum問分生成する関数
     function generateProblems(num) {
       const problemsArray = [];
       for (let i = 0; i < num; i++) {
-        const a = Math.floor(Math.random() * 89) + 11; // 11～99のランダムな整数
+        const a = Math.floor(Math.random() * 89) + 11; // 11～99
         const b = Math.floor(Math.random() * 89) + 11;
         problemsArray.push({ a, b, answer: a * b });
       }
       return problemsArray;
     }
 
-    // ゲームの初期化
+    // ゲーム開始処理
     function initGame() {
       problems = generateProblems(10);
       currentProblemIndex = 0;
       score = 0;
       currentInput = "";
-      updateDisplay();
+      startTime = new Date();  // ゲーム開始時刻を記録
       messageElement.textContent = "";
-      // 既に表示されている再スタートボタンがあれば削除
-      const restartButton = document.getElementById('restartButton');
-      if (restartButton) restartButton.remove();
+      updateDisplay();
     }
 
     // 問題と入力の表示更新
@@ -148,12 +174,12 @@
         const currentProblem = problems[currentProblemIndex];
         problemElement.textContent = `${currentProblem.a} x ${currentProblem.b}`;
       } else {
-        problemElement.textContent = "ゲーム終了";
+        problemElement.textContent = "";
       }
       inputDisplay.textContent = currentInput;
     }
 
-    // 数字ボタンがクリックされたときの処理
+    // 数字ボタンのクリック処理
     numberButtons.forEach(button => {
       button.addEventListener('click', () => {
         const digit = button.getAttribute('data-number');
@@ -162,7 +188,7 @@
       });
     });
 
-    // 取り消しボタンの処理（入力を一文字削除）
+    // 取り消しボタンの処理（最後の1文字削除）
     clearButton.addEventListener('click', () => {
       currentInput = currentInput.slice(0, -1);
       updateDisplay();
@@ -170,19 +196,16 @@
 
     // 回答ボタンの処理
     submitButton.addEventListener('click', () => {
-      // 問題が終了している場合は何もしない
       if (currentProblemIndex >= problems.length) return;
 
       const currentProblem = problems[currentProblemIndex];
       const userAnswer = parseInt(currentInput, 10);
 
-      // 入力が空または数字以外の場合
       if (isNaN(userAnswer)) {
         messageElement.textContent = "数字を入力してください";
         return;
       }
 
-      // 正解チェック
       if (userAnswer === currentProblem.answer) {
         messageElement.textContent = "正解！";
         score++;
@@ -190,45 +213,46 @@
         messageElement.textContent = `不正解！ 正しい答えは ${currentProblem.answer}`;
       }
 
-      // 入力リセットし、次の問題へ移行
+      // 入力をリセットして次の問題へ
       currentInput = "";
       currentProblemIndex++;
 
-      // 次の問題へ移る前に少し待つ（1.5秒）
       setTimeout(() => {
         if (currentProblemIndex < problems.length) {
           messageElement.textContent = "";
           updateDisplay();
         } else {
-          // ゲーム終了時の処理
-          problemElement.textContent = "ゲーム終了！";
-          inputDisplay.textContent = "";
-          messageElement.textContent = `あなたのスコア: ${score} / ${problems.length}`;
-          showRestartButton();
+          endGame();
         }
       }, 1500);
     });
 
-    // ゲーム再スタート用のボタンを表示する関数
-    function showRestartButton() {
-      const restartButton = document.createElement('button');
-      restartButton.textContent = "もう一度プレイ";
-      restartButton.id = "restartButton";
-      restartButton.style.marginTop = "20px";
-      restartButton.style.padding = "10px 20px";
-      restartButton.style.fontSize = "1em";
-      restartButton.style.border = "none";
-      restartButton.style.borderRadius = "8px";
-      restartButton.style.cursor = "pointer";
-      restartButton.addEventListener('click', () => {
-        restartButton.remove();
-        initGame();
-      });
-      document.querySelector('.container').appendChild(restartButton);
+    // ゲーム終了時の処理
+    function endGame() {
+      // 経過時間を計算（秒単位）
+      const endTime = new Date();
+      const elapsedTime = Math.floor((endTime - startTime) / 1000);
+
+      // ゲーム画面を非表示、結果画面を表示
+      gameScreen.style.display = "none";
+      finalScoreElement.textContent = `あなたのスコア: ${score} / ${problems.length}`;
+      finalTimeElement.textContent = `解答時間: ${elapsedTime}秒`;
+      resultScreen.style.display = "block";
     }
 
-    // ページ読み込み時にゲーム開始
-    initGame();
+    // ホーム画面のスタートボタン押下時
+    startButton.addEventListener('click', () => {
+      homeScreen.style.display = "none";
+      gameScreen.style.display = "block";
+      resultScreen.style.display = "none";
+      initGame();
+    });
+
+    // 結果画面のもう一度プレイボタン押下時
+    restartButton.addEventListener('click', () => {
+      resultScreen.style.display = "none";
+      homeScreen.style.display = "block";
+    });
   </script>
 </body>
 </html>
