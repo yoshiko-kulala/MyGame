@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>掛け算練習ゲーム</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 400px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .problem {
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+    .display {
+      font-size: 2em;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-height: 50px;
+      background: #e9e9e9;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .buttons button {
+      width: 60px;
+      height: 60px;
+      margin: 5px;
+      font-size: 1.5em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #4CAF50;
+      color: #fff;
+    }
+    .buttons button:active {
+      transform: scale(0.95);
+    }
+    .control-buttons {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+    }
+    .control-buttons button {
+      width: 100px;
+      height: 50px;
+      margin: 5px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .message {
+      font-size: 1.5em;
+      margin-top: 20px;
+      min-height: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>掛け算練習ゲーム</h1>
+    <!-- 問題表示 -->
+    <div class="problem" id="problem">問題がここに表示されます</div>
+    <!-- ユーザーの入力表示 -->
+    <div class="display" id="inputDisplay"></div>
+    <!-- 数字ボタン -->
+    <div class="buttons">
+      <button data-number="1">1</button>
+      <button data-number="2">2</button>
+      <button data-number="3">3</button>
+      <button data-number="4">4</button>
+      <button data-number="5">5</button>
+      <button data-number="6">6</button>
+      <button data-number="7">7</button>
+      <button data-number="8">8</button>
+      <button data-number="9">9</button>
+      <button data-number="0">0</button>
+    </div>
+    <!-- 取り消し・回答ボタン -->
+    <div class="control-buttons">
+      <button id="clearButton">取り消し</button>
+      <button id="submitButton">回答</button>
+    </div>
+    <!-- 正誤・スコア表示用 -->
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    // ゲーム用の変数
+    let problems = [];         // 問題リスト
+    let currentProblemIndex = 0;
+    let score = 0;
+    let currentInput = "";
+
+    // HTML要素の取得
+    const problemElement = document.getElementById('problem');
+    const inputDisplay = document.getElementById('inputDisplay');
+    const messageElement = document.getElementById('message');
+    const clearButton = document.getElementById('clearButton');
+    const submitButton = document.getElementById('submitButton');
+    const numberButtons = document.querySelectorAll('.buttons button');
+
+    // 11x11～99x99の掛け算問題をnum問分生成する関数
+    function generateProblems(num) {
+      const problemsArray = [];
+      for (let i = 0; i < num; i++) {
+        const a = Math.floor(Math.random() * 89) + 11; // 11～99のランダムな整数
+        const b = Math.floor(Math.random() * 89) + 11;
+        problemsArray.push({ a, b, answer: a * b });
+      }
+      return problemsArray;
+    }
+
+    // ゲームの初期化
+    function initGame() {
+      problems = generateProblems(10);
+      currentProblemIndex = 0;
+      score = 0;
+      currentInput = "";
+      updateDisplay();
+      messageElement.textContent = "";
+      // 既に表示されている再スタートボタンがあれば削除
+      const restartButton = document.getElementById('restartButton');
+      if (restartButton) restartButton.remove();
+    }
+
+    // 問題と入力の表示更新
+    function updateDisplay() {
+      if (currentProblemIndex < problems.length) {
+        const currentProblem = problems[currentProblemIndex];
+        problemElement.textContent = `${currentProblem.a} x ${currentProblem.b}`;
+      } else {
+        problemElement.textContent = "ゲーム終了";
+      }
+      inputDisplay.textContent = currentInput;
+    }
+
+    // 数字ボタンがクリックされたときの処理
+    numberButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const digit = button.getAttribute('data-number');
+        currentInput += digit;
+        updateDisplay();
+      });
+    });
+
+    // 取り消しボタンの処理（入力を一文字削除）
+    clearButton.addEventListener('click', () => {
+      currentInput = currentInput.slice(0, -1);
+      updateDisplay();
+    });
+
+    // 回答ボタンの処理
+    submitButton.addEventListener('click', () => {
+      // 問題が終了している場合は何もしない
+      if (currentProblemIndex >= problems.length) return;
+
+      const currentProblem = problems[currentProblemIndex];
+      const userAnswer = parseInt(currentInput, 10);
+
+      // 入力が空または数字以外の場合
+      if (isNaN(userAnswer)) {
+        messageElement.textContent = "数字を入力してください";
+        return;
+      }
+
+      // 正解チェック
+      if (userAnswer === currentProblem.answer) {
+        messageElement.textContent = "正解！";
+        score++;
+      } else {
+        messageElement.textContent = `不正解！ 正しい答えは ${currentProblem.answer}`;
+      }
+
+      // 入力リセットし、次の問題へ移行
+      currentInput = "";
+      currentProblemIndex++;
+
+      // 次の問題へ移る前に少し待つ（1.5秒）
+      setTimeout(() => {
+        if (currentProblemIndex < problems.length) {
+          messageElement.textContent = "";
+          updateDisplay();
+        } else {
+          // ゲーム終了時の処理
+          problemElement.textContent = "ゲーム終了！";
+          inputDisplay.textContent = "";
+          messageElement.textContent = `あなたのスコア: ${score} / ${problems.length}`;
+          showRestartButton();
+        }
+      }, 1500);
+    });
+
+    // ゲーム再スタート用のボタンを表示する関数
+    function showRestartButton() {
+      const restartButton = document.createElement('button');
+      restartButton.textContent = "もう一度プレイ";
+      restartButton.id = "restartButton";
+      restartButton.style.marginTop = "20px";
+      restartButton.style.padding = "10px 20px";
+      restartButton.style.fontSize = "1em";
+      restartButton.style.border = "none";
+      restartButton.style.borderRadius = "8px";
+      restartButton.style.cursor = "pointer";
+      restartButton.addEventListener('click', () => {
+        restartButton.remove();
+        initGame();
+      });
+      document.querySelector('.container').appendChild(restartButton);
+    }
+
+    // ページ読み込み時にゲーム開始
+    initGame();
+  </script>
+</body>
+</html>
