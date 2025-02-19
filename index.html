@@ -28,13 +28,16 @@
       font-size: 2em;
       margin-bottom: 20px;
     }
-    .display {
-      font-size: 2em;
+    /* 各桁入力欄のスタイル */
+    .digit-input-container {
       margin-bottom: 20px;
-      border: 1px solid #ccc;
-      padding: 10px;
-      min-height: 50px;
-      background: #e9e9e9;
+    }
+    .digit-input {
+      width: 60px;
+      height: 60px;
+      font-size: 2em;
+      text-align: center;
+      margin: 5px;
     }
     .buttons {
       display: flex;
@@ -84,8 +87,7 @@
       background: #2196F3;
       color: #fff;
     }
-    
-    /* スマートフォンなど画面幅が狭い場合の調整 */
+    /* レスポンシブ調整 */
     @media (max-width: 600px) {
       .container {
         width: 95%;
@@ -95,13 +97,14 @@
       .problem {
         font-size: 1.5em;
       }
-      .display {
+      .digit-input {
+        width: 18vw;
+        height: 18vw;
         font-size: 1.5em;
-        padding: 5px;
-        min-height: 40px;
+        margin: 2vw;
       }
       .buttons button {
-        width: 18vw;    /* 画面幅に合わせた相対サイズ */
+        width: 18vw;
         height: 18vw;
         margin: 2vw;
         font-size: 1.2em;
@@ -130,7 +133,14 @@
   <!-- ゲーム画面 -->
   <div id="gameScreen" class="container" style="display: none;">
     <div class="problem" id="problem">問題がここに表示されます</div>
-    <div class="display" id="inputDisplay"></div>
+    <!-- 4桁の入力欄（左から1桁ずつ、常に4桁分表示） -->
+    <div class="digit-input-container" id="digitInputContainer">
+      <input type="text" class="digit-input" maxlength="1" data-index="0">
+      <input type="text" class="digit-input" maxlength="1" data-index="1">
+      <input type="text" class="digit-input" maxlength="1" data-index="2">
+      <input type="text" class="digit-input" maxlength="1" data-index="3">
+    </div>
+    <!-- 数字ボタン -->
     <div class="buttons">
       <button data-number="1">1</button>
       <button data-number="2">2</button>
@@ -143,6 +153,7 @@
       <button data-number="9">9</button>
       <button data-number="0">0</button>
     </div>
+    <!-- 取り消し・回答ボタン -->
     <div class="control-buttons">
       <button id="clearButton">取り消し</button>
       <button id="submitButton">回答</button>
@@ -163,8 +174,8 @@
     let problems = [];         // 問題リスト
     let currentProblemIndex = 0;
     let score = 0;
-    let currentInput = "";
     let startTime = null;      // ゲーム開始時刻
+    let activeInputIndex = 0;  // 現在フォーカスしている桁
 
     // HTML要素の取得
     const homeScreen = document.getElementById('homeScreen');
@@ -172,14 +183,29 @@
     const resultScreen = document.getElementById('resultScreen');
     const startButton = document.getElementById('startButton');
     const problemElement = document.getElementById('problem');
-    const inputDisplay = document.getElementById('inputDisplay');
-    const messageElement = document.getElementById('message');
     const clearButton = document.getElementById('clearButton');
     const submitButton = document.getElementById('submitButton');
-    const numberButtons = document.querySelectorAll('.buttons button');
+    const messageElement = document.getElementById('message');
     const finalScoreElement = document.getElementById('finalScore');
     const finalTimeElement = document.getElementById('finalTime');
     const restartButton = document.getElementById('restartButton');
+
+    // 数字ボタン取得
+    const numberButtons = document.querySelectorAll('.buttons button');
+
+    // 桁入力欄取得
+    const digitInputs = document.querySelectorAll('.digit-input');
+
+    // 各入力欄にフォーカス時の処理（どの桁を編集するか記録）
+    digitInputs.forEach((input, index) => {
+      input.addEventListener('focus', () => {
+        activeInputIndex = index;
+      });
+      // 直接入力時は1文字のみ許可
+      input.addEventListener('input', () => {
+        input.value = input.value.slice(-1);
+      });
+    });
 
     // 11x11～99x99の掛け算問題をnum問分生成する関数
     function generateProblems(num) {
@@ -197,65 +223,84 @@
       problems = generateProblems(10);
       currentProblemIndex = 0;
       score = 0;
-      currentInput = "";
       startTime = new Date();  // ゲーム開始時刻を記録
       messageElement.textContent = "";
-      updateDisplay();
+      // 最初の問題を表示
+      problemElement.textContent = `${problems[currentProblemIndex].a} x ${problems[currentProblemIndex].b}`;
+      // 各入力欄をクリアし、最初の桁にフォーカス
+      digitInputs.forEach(input => input.value = '');
+      activeInputIndex = 0;
+      digitInputs[0].focus();
     }
 
-    // 問題と入力の表示更新
-    function updateDisplay() {
-      if (currentProblemIndex < problems.length) {
-        const currentProblem = problems[currentProblemIndex];
-        problemElement.textContent = `${currentProblem.a} x ${currentProblem.b}`;
-      } else {
-        problemElement.textContent = "";
-      }
-      inputDisplay.textContent = currentInput;
-    }
-
-    // 数字ボタンのクリック処理
+    // 数字ボタン押下時の処理
     numberButtons.forEach(button => {
       button.addEventListener('click', () => {
         const digit = button.getAttribute('data-number');
-        currentInput += digit;
-        updateDisplay();
+        // もしactiveInputIndexが不正な場合、または未設定なら最初の空欄を探す
+        if (activeInputIndex === null || activeInputIndex < 0 || activeInputIndex >= digitInputs.length) {
+          activeInputIndex = 0;
+          for (let i = 0; i < digitInputs.length; i++) {
+            if (digitInputs[i].value === '') {
+              activeInputIndex = i;
+              break;
+            }
+          }
+        }
+        // 現在の桁に入力
+        digitInputs[activeInputIndex].value = digit;
+        // 入力後、次の桁に自動フォーカス（最終桁の場合はそのまま）
+        if (activeInputIndex < digitInputs.length - 1) {
+          activeInputIndex++;
+          digitInputs[activeInputIndex].focus();
+        }
       });
     });
 
-    // 取り消しボタンの処理（最後の1文字削除）
+    // 取り消しボタンの処理
     clearButton.addEventListener('click', () => {
-      currentInput = currentInput.slice(0, -1);
-      updateDisplay();
+      // 現在の入力欄が空の場合、前の桁に移動して削除
+      if (digitInputs[activeInputIndex].value === '' && activeInputIndex > 0) {
+        activeInputIndex--;
+        digitInputs[activeInputIndex].value = '';
+        digitInputs[activeInputIndex].focus();
+      } else {
+        // 現在の桁をクリア
+        digitInputs[activeInputIndex].value = '';
+        digitInputs[activeInputIndex].focus();
+      }
     });
 
     // 回答ボタンの処理
     submitButton.addEventListener('click', () => {
       if (currentProblemIndex >= problems.length) return;
-
-      const currentProblem = problems[currentProblemIndex];
-      const userAnswer = parseInt(currentInput, 10);
-
-      if (isNaN(userAnswer)) {
-        messageElement.textContent = "数字を入力してください";
+      // 4つの入力欄の値を連結して1つの文字列にする
+      let userAnswerStr = '';
+      digitInputs.forEach(input => {
+        userAnswerStr += input.value;
+      });
+      // 4桁全て入力されていなければ警告
+      if (userAnswerStr.length < 4 || userAnswerStr.includes('')) {
+        messageElement.textContent = "4桁全て入力してください";
         return;
       }
-
-      if (userAnswer === currentProblem.answer) {
+      // 正解は必ず4桁になるよう、足りない場合は左側に0を補完
+      let correctAnswerStr = problems[currentProblemIndex].answer.toString().padStart(4, '0');
+      if (userAnswerStr === correctAnswerStr) {
         messageElement.textContent = "正解！";
         score++;
       } else {
-        messageElement.textContent = `不正解！ 正しい答えは ${currentProblem.answer}`;
+        messageElement.textContent = `不正解！ 正しい答えは ${correctAnswerStr}`;
       }
-
-      // 入力をリセットして次の問題へ
-      currentInput = "";
+      // 次の問題に備えて入力欄をクリアし、最初の桁にフォーカス
+      digitInputs.forEach(input => input.value = '');
+      activeInputIndex = 0;
+      digitInputs[0].focus();
       currentProblemIndex++;
-
       setTimeout(() => {
         if (currentProblemIndex < problems.length) {
           messageElement.textContent = "";
-          updateDisplay();
+          problemElement.textContent = `${problems[currentProblemIndex].a} x ${problems[currentProblemIndex].b}`;
         } else {
           endGame();
         }
@@ -264,11 +309,8 @@
 
     // ゲーム終了時の処理
     function endGame() {
-      // 経過時間を計算（秒単位）
       const endTime = new Date();
       const elapsedTime = Math.floor((endTime - startTime) / 1000);
-
-      // ゲーム画面を非表示、結果画面を表示
       gameScreen.style.display = "none";
       finalScoreElement.textContent = `あなたのスコア: ${score} / ${problems.length}`;
       finalTimeElement.textContent = `解答時間: ${elapsedTime}秒`;
@@ -283,7 +325,7 @@
       initGame();
     });
 
-    // 結果画面のもう一度プレイボタン押下時
+    // 結果画面の「もう一度プレイ」ボタン押下時
     restartButton.addEventListener('click', () => {
       resultScreen.style.display = "none";
       homeScreen.style.display = "block";
