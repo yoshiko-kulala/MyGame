@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>掛け算練習ゲーム</title>
   <style>
-    /* 共通スタイル */
     body {
       font-family: sans-serif;
       text-align: center;
@@ -28,8 +27,9 @@
       font-size: 2em;
       margin-bottom: 20px;
     }
-    /* 各桁入力欄 */
     .digit-input-container {
+      display: flex;
+      justify-content: center;
       margin-bottom: 20px;
     }
     .digit-input {
@@ -37,7 +37,17 @@
       height: 60px;
       font-size: 2em;
       text-align: center;
+      line-height: 60px;
       margin: 5px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      background: #e9e9e9;
+      cursor: pointer;
+      user-select: none;
+    }
+    .digit-input.active {
+      border-color: #2196F3;
+      background: #d0e8ff;
     }
     .buttons {
       display: flex;
@@ -93,13 +103,11 @@
         margin: 20px auto;
         padding: 10px;
       }
-      .problem {
-        font-size: 1.5em;
-      }
       .digit-input {
         width: 18vw;
         height: 18vw;
         font-size: 1.5em;
+        line-height: 18vw;
         margin: 2vw;
       }
       .buttons button {
@@ -133,10 +141,10 @@
   <div id="gameScreen" class="container" style="display: none;">
     <div class="problem" id="problem">問題がここに表示されます</div>
     <div class="digit-input-container">
-      <input type="text" class="digit-input" maxlength="1" data-index="0">
-      <input type="text" class="digit-input" maxlength="1" data-index="1">
-      <input type="text" class="digit-input" maxlength="1" data-index="2">
-      <input type="text" class="digit-input" maxlength="1" data-index="3">
+      <div class="digit-input active" data-index="3">0</div>
+      <div class="digit-input" data-index="2">0</div>
+      <div class="digit-input" data-index="1">0</div>
+      <div class="digit-input" data-index="0">0</div>
     </div>
     <div class="buttons">
       <button data-number="1">1</button>
@@ -151,18 +159,9 @@
       <button data-number="0">0</button>
     </div>
     <div class="control-buttons">
-      <button id="clearButton">取り消し</button>
       <button id="submitButton">回答</button>
     </div>
     <div class="message" id="message"></div>
-  </div>
-
-  <!-- 結果画面 -->
-  <div id="resultScreen" class="container" style="display: none;">
-    <h2>ゲーム終了！</h2>
-    <p id="finalScore">あなたのスコア: 0 / 10</p>
-    <p id="finalTime">解答時間: 0秒</p>
-    <button id="restartButton">もう一度プレイ</button>
   </div>
 
   <script>
@@ -170,10 +169,10 @@
     let currentProblemIndex = 0;
     let score = 0;
     let startTime = null;
+    let activeIndex = 3;  // 初期状態は1の位
 
     const homeScreen = document.getElementById('homeScreen');
     const gameScreen = document.getElementById('gameScreen');
-    const resultScreen = document.getElementById('resultScreen');
     const problemElement = document.getElementById('problem');
     const messageElement = document.getElementById('message');
     const digitInputs = document.querySelectorAll('.digit-input');
@@ -198,38 +197,39 @@
 
     function showProblem() {
       problemElement.textContent = `${problems[currentProblemIndex].a} x ${problems[currentProblemIndex].b}`;
-      digitInputs.forEach(input => input.value = '');
+      digitInputs.forEach(input => input.textContent = '0');
+      setActiveDigit(3);
     }
 
+    function setActiveDigit(index) {
+      digitInputs.forEach(input => input.classList.remove('active'));
+      digitInputs[index].classList.add('active');
+      activeIndex = index;
+    }
+
+    digitInputs.forEach((input, index) => {
+      input.addEventListener('click', () => setActiveDigit(index));
+    });
+
+    numberButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        digitInputs[activeIndex].textContent = button.dataset.number;
+      });
+    });
+
     document.getElementById('submitButton').addEventListener('click', () => {
-      let userAnswer = Array.from(digitInputs).map(input => input.value).join('');
-      if (userAnswer.length < 4 || userAnswer.includes('')) {
-        messageElement.textContent = "4桁全て入力してください";
-        return;
-      }
+      let userAnswer = Array.from(digitInputs).map(input => input.textContent).join('');
       if (userAnswer === problems[currentProblemIndex].answer) score++;
       currentProblemIndex++;
       setTimeout(() => {
-        currentProblemIndex < problems.length ? showProblem() : endGame();
+        currentProblemIndex < problems.length ? showProblem() : alert(`スコア: ${score}/10`);
       }, 1500);
     });
-
-    function endGame() {
-      gameScreen.style.display = "none";
-      resultScreen.style.display = "block";
-      document.getElementById('finalScore').textContent = `あなたのスコア: ${score} / 10`;
-      document.getElementById('finalTime').textContent = `解答時間: ${Math.floor((new Date() - startTime) / 1000)}秒`;
-    }
 
     document.getElementById('startButton').addEventListener('click', () => {
       homeScreen.style.display = "none";
       gameScreen.style.display = "block";
       initGame();
-    });
-
-    document.getElementById('restartButton').addEventListener('click', () => {
-      resultScreen.style.display = "none";
-      homeScreen.style.display = "block";
     });
   </script>
 </body>
