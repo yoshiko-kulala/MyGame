@@ -96,37 +96,6 @@
       background: #2196F3;
       color: #fff;
     }
-    /* スマホ対応 */
-    @media (max-width: 600px) {
-      .container {
-        width: 95%;
-        margin: 20px auto;
-        padding: 10px;
-      }
-      .digit-input {
-        width: 18vw;
-        height: 18vw;
-        font-size: 1.5em;
-        line-height: 18vw;
-        margin: 2vw;
-      }
-      .buttons button {
-        width: 18vw;
-        height: 18vw;
-        margin: 2vw;
-        font-size: 1.2em;
-      }
-      .control-buttons button {
-        width: 40vw;
-        height: 40px;
-        font-size: 1em;
-      }
-      #startButton, #restartButton {
-        width: 80%;
-        font-size: 1.2em;
-        padding: 10px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -164,6 +133,14 @@
     <div class="message" id="message"></div>
   </div>
 
+  <!-- 結果画面 -->
+  <div id="resultScreen" class="container" style="display: none;">
+    <h2>ゲーム終了！</h2>
+    <p id="finalScore">あなたのスコア: 0 / 10</p>
+    <p id="finalTime">解答時間: 0秒</p>
+    <button id="restartButton">もう一度プレイ</button>
+  </div>
+
   <script>
     let problems = [];
     let currentProblemIndex = 0;
@@ -173,6 +150,7 @@
 
     const homeScreen = document.getElementById('homeScreen');
     const gameScreen = document.getElementById('gameScreen');
+    const resultScreen = document.getElementById('resultScreen');
     const problemElement = document.getElementById('problem');
     const messageElement = document.getElementById('message');
     const digitInputs = document.querySelectorAll('.digit-input');
@@ -219,12 +197,21 @@
 
     document.getElementById('submitButton').addEventListener('click', () => {
       let userAnswer = Array.from(digitInputs).map(input => input.textContent).join('');
-      if (userAnswer === problems[currentProblemIndex].answer) score++;
+      let correctAnswer = problems[currentProblemIndex].answer;
+      messageElement.textContent = userAnswer === correctAnswer ? "正解！" : `不正解！ 正しい答えは ${correctAnswer}`;
+      if (userAnswer === correctAnswer) score++;
       currentProblemIndex++;
       setTimeout(() => {
-        currentProblemIndex < problems.length ? showProblem() : alert(`スコア: ${score}/10`);
-      }, 1500);
+        currentProblemIndex < problems.length ? showProblem() : endGame();
+      }, 2000);
     });
+
+    function endGame() {
+      gameScreen.style.display = "none";
+      resultScreen.style.display = "block";
+      document.getElementById('finalScore').textContent = `スコア: ${score} / 10`;
+      document.getElementById('finalTime').textContent = `解答時間: ${Math.floor((new Date() - startTime) / 1000)}秒`;
+    }
 
     document.getElementById('startButton').addEventListener('click', () => {
       homeScreen.style.display = "none";
