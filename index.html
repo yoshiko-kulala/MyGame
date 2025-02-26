@@ -133,24 +133,15 @@
     <div class="message" id="message"></div>
   </div>
 
-  <!-- 結果画面 -->
-  <div id="resultScreen" class="container" style="display: none;">
-    <h2>ゲーム終了！</h2>
-    <p id="finalScore">あなたのスコア: 0 / 10</p>
-    <p id="finalTime">解答時間: 0秒</p>
-    <button id="restartButton">もう一度プレイ</button>
-  </div>
-
   <script>
     let problems = [];
     let currentProblemIndex = 0;
     let score = 0;
     let startTime = null;
-    let activeIndex = 3;  // 初期状態は1の位
+    let activeIndex = 3;
 
     const homeScreen = document.getElementById('homeScreen');
     const gameScreen = document.getElementById('gameScreen');
-    const resultScreen = document.getElementById('resultScreen');
     const problemElement = document.getElementById('problem');
     const messageElement = document.getElementById('message');
     const digitInputs = document.querySelectorAll('.digit-input');
@@ -192,6 +183,9 @@
     numberButtons.forEach(button => {
       button.addEventListener('click', () => {
         digitInputs[activeIndex].textContent = button.dataset.number;
+        if (activeIndex > 0) {
+          setActiveDigit(activeIndex - 1);
+        }
       });
     });
 
@@ -208,9 +202,8 @@
 
     function endGame() {
       gameScreen.style.display = "none";
-      resultScreen.style.display = "block";
-      document.getElementById('finalScore').textContent = `スコア: ${score} / 10`;
-      document.getElementById('finalTime').textContent = `解答時間: ${Math.floor((new Date() - startTime) / 1000)}秒`;
+      alert(`ゲーム終了！\nスコア: ${score} / 10\n解答時間: ${Math.floor((new Date() - startTime) / 1000)}秒`);
+      homeScreen.style.display = "block";
     }
 
     document.getElementById('startButton').addEventListener('click', () => {
